@@ -41,7 +41,6 @@ class EventPublisher(private val applicationEventPublisher: ApplicationEventPubl
     private var count = 0L
 
     @Scheduled(fixedDelay = 1000)
-    // name this function with a hilarious foo bar nonsense name
     fun flamboxCongrepulator() {
         val plumbusEvent = PlumbusEvent(this, count)
         logger.info("Publishing event $plumbusEvent")
