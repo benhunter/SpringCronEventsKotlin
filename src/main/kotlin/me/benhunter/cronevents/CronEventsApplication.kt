@@ -1,8 +1,12 @@
 package me.benhunter.cronevents
 
 import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.event.SpringApplicationEvent
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.boot.context.properties.bind.ConstructorBinding
 import org.springframework.boot.runApplication
 import org.springframework.context.ApplicationEvent
 import org.springframework.context.ApplicationEventPublisher
@@ -18,6 +22,9 @@ class CronEventsApplication
 fun main(args: Array<String>) {
     runApplication<CronEventsApplication>(*args)
 }
+
+@ConfigurationProperties("app")
+data class AppConfiguration @ConstructorBinding constructor(val interval: Long)
 
 @Component
 class EventLogger {
@@ -36,18 +43,27 @@ class EventLogger {
 
 @Configuration
 @EnableScheduling
-class EventPublisher(private val applicationEventPublisher: ApplicationEventPublisher) {
+@EnableAutoConfiguration
+@EnableConfigurationProperties(AppConfiguration::class)
+class EventPublisher(
+    private val applicationEventPublisher: ApplicationEventPublisher,
+    appConfiguration: AppConfiguration
+) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private var count = 0L
+    private val interval = appConfiguration.interval
 
-    @Scheduled(fixedDelay = 1000)
+    @Scheduled(fixedDelayString = "\${app.interval}")
     fun flamboxCongrepulator() {
         val plumbusEvent = PlumbusEvent(this, count)
-        logger.info("Publishing event $plumbusEvent")
+        logger.info("Publishing event $plumbusEvent. Next event in $interval")
         applicationEventPublisher.publishEvent(plumbusEvent)
         count += 1
     }
 }
 
 class PlumbusEvent(source: Any, val id: Long) : ApplicationEvent(source) {
+    override fun toString(): String {
+        return javaClass.name + "[id=$id, source=$source]"
+    }
 }
